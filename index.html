@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Receipt Tracker</title>
+
+<style>
+  :root {
+    --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+    --text:#1a1a18;--text2:#6b6b65;--text3:#9b9b93;
+    --accent:#2d6a4f;--accent-light:#e8f5ee;--accent2:#1b4332;
+    --danger:#c0392b;--danger-light:#fdecea;
+    --warn:#b7791f;--warn-light:#fef9ec;
+    --radius:14px;--radius-sm:8px;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#111110;--surface:#1c1c1a;--surface2:#242422;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+    --text:#f0efe9;--text2:#9b9b93;--text3:#6b6b65;
+    --accent:#52b788;--accent-light:#0d2b1e;--accent2:#95d5b2;
+    --danger:#e57373;--danger-light:#2c1a1a;
+    --warn:#f6ad55;--warn-light:#2c2010;
+  }}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,'SF Pro Text',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;}
+
+  .nav{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:14px 20px;padding-top:max(14px,env(safe-area-inset-top));}
+  .nav-title{font-size:17px;font-weight:600;letter-spacing:-.3px;}
+  .nav-btn{background:none;border:none;cursor:pointer;color:var(--accent);font-size:15px;font-weight:500;padding:6px 0;display:flex;align-items:center;gap:5px;}
+  .nav-icon{color:var(--accent);cursor:pointer;background:none;border:none;padding:0;}
+
+  .screen{display:none;padding:0 0 100px;}
+  .screen.active{display:block;}
+
+  .welcome-wrap{padding:60px 24px 32px;text-align:center;}
+  .welcome-logo{font-size:56px;margin-bottom:16px;}
+  .welcome-title{font-size:26px;font-weight:700;margin-bottom:8px;letter-spacing:-.5px;}
+  .welcome-sub{font-size:15px;color:var(--text2);line-height:1.6;margin-bottom:40px;}
+  .welcome-form{text-align:left;}
+
+  .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:.5px solid var(--border);display:flex;padding-bottom:max(16px,env(safe-area-inset-bottom));z-index:100;}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 2px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;transition:color .15s;}
+  .tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .tab.active{color:var(--accent);}
+
+  .card{background:var(--surface);border-radius:var(--radius);border:.5px solid var(--border);margin:12px 16px;overflow:hidden;}
+  .card-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:.5px solid var(--border);font-size:15px;}
+  .card-row:last-child{border-bottom:none;}
+  .card-row-label{color:var(--text2);font-size:14px;}
+  .card-row-value{color:var(--text);font-weight:500;text-align:right;max-width:60%;}
+
+  .section-header{font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);padding:20px 20px 6px;}
+
+  .capture-wrap{padding:24px 16px 8px;}
+  .capture-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:18px;font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .15s;}
+  .capture-btn:active{opacity:.85;}
+  .capture-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+  .btn-secondary{background:var(--surface2);border:.5px solid var(--border2);border-radius:var(--radius-sm);padding:11px 16px;font-size:15px;font-weight:500;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:8px;transition:opacity .15s;}
+  .btn-secondary:active{opacity:.75;}
+  .btn-row{display:flex;gap:10px;padding:0 16px;}
+  .btn-row .btn-secondary{flex:1;justify-content:center;}
+
+  .processing{text-align:center;padding:48px 24px;display:none;}
+  .spinner{width:40px;height:40px;margin:0 auto 16px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .preview-img{width:calc(100% - 32px);max-height:260px;object-fit:contain;background:var(--surface2);border-radius:var(--radius);margin:12px 16px;display:none;}
+
+  .item-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:.5px solid var(--border);}
+  .item-row:last-child{border-bottom:none;}
+  .item-info{flex:1;min-width:0;}
+  .item-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .item-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+  .item-price{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;}
+  .item-discount{font-size:12px;color:var(--warn);}
+  .item-delete{background:none;border:none;cursor:pointer;color:var(--danger);padding:4px;font-size:18px;line-height:1;}
+
+  .history-item{display:flex;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);gap:12px;}
+  .history-item:last-child{border-bottom:none;}
+  .history-icon{width:40px;height:40px;border-radius:10px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
+  .history-info{flex:1;min-width:0;}
+  .history-store{font-size:15px;font-weight:500;}
+  .history-date{font-size:12px;color:var(--text2);margin-top:2px;}
+  .history-total{font-size:15px;font-weight:600;}
+
+  .settings-field{padding:14px 16px;border-bottom:.5px solid var(--border);}
+  .settings-field:last-child{border-bottom:none;}
+  .settings-label{font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500;}
+  .settings-input{width:100%;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:'SF Mono',monospace;}
+  .settings-input::placeholder{color:var(--text3);font-family:-apple-system,sans-serif;}
+
+  .save-btn{width:calc(100% - 32px);margin:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:14px;font-size:16px;font-weight:600;cursor:pointer;}
+  .submit-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:16px;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+  .submit-btn:active{opacity:.85;}
+  .submit-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .submit-area{padding:16px;}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:20px;font-size:14px;font-weight:500;z-index:999;opacity:0;transition:opacity .2s;white-space:nowrap;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .toast.success{background:var(--accent);color:#fff;}
+  .toast.error{background:var(--danger);color:#fff;}
+
+  .editable{border:none;background:none;width:100%;font-size:inherit;color:inherit;font-weight:inherit;}
+  .editable:focus{outline:1.5px solid var(--accent);border-radius:4px;padding:2px 4px;}
+
+  .empty{text-align:center;padding:60px 24px;color:var(--text2);font-size:15px;line-height:1.6;}
+  .empty-icon{font-size:48px;margin-bottom:12px;}
+
+  input[type="text"],input[type="date"],input[type="time"],input[type="password"],select{
+    background:var(--surface2);border:.5px solid var(--border2);border-radius:var(--radius-sm);
+    padding:10px 12px;font-size:14px;color:var(--text);width:100%;outline:none;
+    appearance:none;-webkit-appearance:none;
+  }
+  input:focus,select:focus{border-color:var(--accent);}
+  .field-group{padding:0 16px;margin-bottom:12px;}
+  .field-label{font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500;display:block;}
+  .inline-edit{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;}
+  .divider{height:.5px;background:var(--border);margin:0 16px;}
+
+  .user-pill{display:flex;align-items:center;gap:6px;background:var(--accent-light);border-radius:20px;padding:4px 10px 4px 6px;cursor:pointer;border:none;}
+  .user-avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .user-name{font-size:13px;font-weight:600;color:var(--accent2);}
+
+  .user-row{display:flex;align-items:center;padding:13px 16px;border-bottom:.5px solid var(--border);gap:12px;}
+  .user-row:last-child{border-bottom:none;}
+  .user-row-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .user-row-info{flex:1;}
+  .user-row-name{font-size:15px;font-weight:500;}
+  .user-row-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+  .code-badge{font-family:'SF Mono',monospace;font-size:13px;font-weight:700;background:var(--warn-light);color:var(--warn);padding:4px 10px;border-radius:8px;letter-spacing:1px;cursor:pointer;}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+  .status-dot.active{background:var(--accent);}
+  .status-dot.pending{background:var(--warn);}
+
+  /* BARCODE SCANNER */
+  .scanner-overlay{position:fixed;inset:0;background:#000;z-index:200;display:none;flex-direction:column;}
+  .scanner-overlay.active{display:flex;}
+  .scanner-header{display:flex;align-items:center;justify-content:space-between;padding:max(20px,env(safe-area-inset-top)) 20px 16px;background:rgba(0,0,0,.7);}
+  .scanner-title{color:#fff;font-size:17px;font-weight:600;}
+  .scanner-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;}
+  .scanner-video-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;}
+  #scanner-video{width:100%;height:100%;object-fit:cover;}
+  .scanner-frame{position:absolute;width:240px;height:160px;border:2px solid var(--accent);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.5);}
+  .scanner-line{position:absolute;width:220px;height:2px;background:var(--accent);animation:scan 2s ease-in-out infinite;}
+  @keyframes scan{0%,100%{top:20px;}50%{top:130px;}}
+  .scanner-hint{color:rgba(255,255,255,.7);font-size:13px;text-align:center;padding:16px;background:rgba(0,0,0,.7);padding-bottom:max(20px,env(safe-area-inset-bottom));}
+
+  /* PRODUCT LOOKUP RESULT */
+  .product-result{border-radius:var(--radius);overflow:hidden;margin:12px 16px;background:var(--surface);border:.5px solid var(--border);}
+  .product-img{width:100%;height:180px;object-fit:contain;background:var(--surface2);}
+  .product-info{padding:16px;}
+  .product-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .product-brand{font-size:13px;color:var(--text2);margin-bottom:12px;}
+  .product-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .product-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--accent-light);color:var(--accent2);}
+  .nutri-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
+  .nutri-cell{text-align:center;background:var(--surface2);border-radius:8px;padding:8px 4px;}
+  .nutri-val{font-size:14px;font-weight:700;}
+  .nutri-label{font-size:10px;color:var(--text2);margin-top:2px;}
+  .in-sheet-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-light);padding:4px 10px;border-radius:20px;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.9.15/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@undecaf/barcode-detector-polyfill@0.9.23/dist/index.js"></script>
+<script>
+  // Install ZBar as BarcodeDetector polyfill for Safari
+  try {
+    window['BarcodeDetector'].getSupportedFormats();
+  } catch {
+    window['BarcodeDetector'] = barcodeDetectorPolyfill.BarcodeDetectorPolyfill;
+  }
+</script>
+</head>
+<body>
+
+<!-- ══ WELCOME ══ -->
+<div id="screen-welcome" class="screen active">
+  <div class="welcome-wrap">
+    <div class="welcome-logo">🧾</div>
+    <div class="welcome-title">Receipt Tracker</div>
+    <div class="welcome-sub">Photograph receipts and track your household spending automatically.</div>
+    <div class="welcome-form">
+      <div class="field-group"><label class="field-label">Invite Code</label><input type="text" id="w-code" placeholder="e.g. MEL-4829" style="text-transform:uppercase;letter-spacing:1px;font-weight:600;"></div>
+      <div class="field-group"><label class="field-label">Your Name</label><input type="text" id="w-name" placeholder="e.g. Mel"></div>
+      <div class="submit-area" style="padding:8px 0 0;"><button class="submit-btn" onclick="registerUser()">Join Receipt Tracker</button></div>
+      <div style="text-align:center;margin-top:16px;"><button class="nav-btn" style="margin:0 auto;" onclick="showAdminLogin()">Admin access →</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CAPTURE ══ -->
+<div id="screen-capture" class="screen">
+  <div class="nav">
+    <button class="user-pill" onclick="showScreen('screen-profile')" id="user-pill-btn">
+      <div class="user-avatar" id="nav-avatar">?</div>
+      <div class="user-name" id="nav-username">Me</div>
+    </button>
+    <span class="nav-title">Capture</span>
+    <button class="nav-icon" onclick="showScreen('screen-settings')" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="capture-wrap">
+    <button class="capture-btn" onclick="triggerCamera()">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Photograph Receipt
+    </button>
+  </div>
+  <div class="btn-row">
+    <button class="btn-secondary" onclick="triggerLibrary()">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Photo Library
+    </button>
+    <button class="btn-secondary" onclick="showScreen('screen-manual')">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Manually
+    </button>
+  </div>
+
+  <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handleImage(this)">
+  <input type="file" id="library-input" accept="image/*" style="display:none" onchange="handleImage(this)">
+  <img id="preview-img" class="preview-img" alt="Receipt preview">
+
+  <div id="processing" class="processing">
+    <div class="spinner"></div>
+    <div style="font-size:15px;color:var(--text2);margin-bottom:6px;">Reading receipt…</div>
+    <div style="font-size:13px;color:var(--text3);">Claude is extracting the data</div>
+  </div>
+
+  <div id="extracted-section" style="display:none">
+    <div class="section-header">Receipt Details</div>
+    <div class="card">
+      <div class="card-row"><span class="card-row-label">Store</span><input class="editable card-row-value" id="ex-store" type="text" placeholder="Store name"></div>
+      <div class="card-row"><span class="card-row-label">Date</span><input class="editable card-row-value" id="ex-date" type="date"></div>
+      <div class="card-row"><span class="card-row-label">Time</span><input class="editable card-row-value" id="ex-time" type="time"></div>
+    </div>
+    <div class="section-header">Items</div>
+    <div class="card" id="items-list"></div>
+    <div id="discounts-section" style="display:none">
+      <div class="section-header">Loyalty Discounts</div>
+      <div class="card" id="discounts-list"></div>
+    </div>
+    <div style="padding:8px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:14px;color:var(--text2);">Total paid</span>
+      <span style="font-size:18px;font-weight:700;" id="total-display">£0.00</span>
+    </div>
+    <div class="submit-area"><button class="submit-btn" id="save-btn" onclick="saveToSheets()">Save to Google Sheets</button></div>
+  </div>
+</div>
+
+<!-- ══ BARCODE SCREEN ══ -->
+<div id="screen-barcode" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showTab('capture')">← Back</button>
+    <span class="nav-title">Barcode Lookup</span>
+    <button class="nav-btn" onclick="openScanner()">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="9"/><line x1="15" y1="3" x2="15" y2="9"/><line x1="9" y1="15" x2="9" y2="21"/><line x1="15" y1="15" x2="15" y2="21"/></svg>
+      Scan
+    </button>
+  </div>
+
+  <div style="padding:16px;">
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="barcode-input" placeholder="Enter barcode number…" style="flex:1;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <button class="btn-secondary" onclick="lookupBarcode(document.getElementById('barcode-input').value)" style="white-space:nowrap;">Look up</button>
+    </div>
+  </div>
+
+  <div id="barcode-loading" style="display:none;" class="processing">
+    <div class="spinner"></div>
+    <div style="font-size:15px;color:var(--text2);">Looking up product…</div>
+  </div>
+
+  <div id="barcode-result" style="display:none;"></div>
+
+  <div id="barcode-empty" class="empty">
+    <div class="empty-icon">📦</div>
+    Scan a barcode or enter one above<br>to look up product details.
+  </div>
+</div>
+
+<!-- ══ HISTORY ══ -->
+<div id="screen-history" class="screen">
+  <div class="nav"><span class="nav-title">History</span></div>
+  <div id="history-list-wrap"></div>
+</div>
+
+<!-- ══ MANUAL ENTRY ══ -->
+<div id="screen-manual" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('screen-capture')">← Back</button>
+    <span class="nav-title">Manual Entry</span>
+    <button class="nav-btn" onclick="addManualItem()">+ Item</button>
+  </div>
+  <div class="section-header">Receipt Details</div>
+  <div class="field-group"><label class="field-label">Store Name</label><input type="text" id="m-store" placeholder="e.g. Sainsbury's Hunstanton"></div>
+  <div class="field-group"><label class="field-label">Date</label><input type="date" id="m-date"></div>
+  <div class="field-group"><label class="field-label">Time</label><input type="time" id="m-time"></div>
+  <div class="section-header">Items</div>
+  <div class="card" id="manual-items-list"></div>
+  <div class="submit-area"><button class="submit-btn" onclick="saveManualToSheets()">Save to Google Sheets</button></div>
+</div>
+
+<!-- ══ PROFILE ══ -->
+<div id="screen-profile" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('screen-capture')">← Back</button>
+    <span class="nav-title">My Profile</span>
+  </div>
+  <div style="text-align:center;padding:40px 24px 24px;">
+    <div style="width:72px;height:72px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;" id="profile-avatar">?</div>
+    <div style="font-size:22px;font-weight:700;" id="profile-name">-</div>
+    <div style="font-size:13px;color:var(--text2);margin-top:4px;" id="profile-id">-</div>
+  </div>
+  <div class="card" style="margin:0 16px;">
+    <div class="card-row"><span class="card-row-label">Member since</span><span class="card-row-value" id="profile-since">-</span></div>
+    <div class="card-row"><span class="card-row-label">Receipts scanned</span><span class="card-row-value" id="profile-count">-</span></div>
+  </div>
+  <div class="submit-area" style="padding-top:24px;"><button class="submit-btn" style="background:var(--danger);" onclick="signOut()">Sign Out</button></div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div id="screen-settings" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('screen-capture')">← Back</button>
+    <span class="nav-title">Settings</span>
+  </div>
+  <div class="section-header">API Keys</div>
+  <div class="card" style="margin:0 16px 12px;">
+    <div class="settings-field">
+      <div class="settings-label">CLAUDE API KEY</div>
+      <input class="settings-input" type="password" id="s-claude-key" placeholder="sk-ant-…">
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+  <div class="section-header">About</div>
+  <div class="card" style="margin:0 16px;">
+    <div class="card-row"><span class="card-row-label">Version</span><span class="card-row-value">2.0</span></div>
+    <div class="card-row"><span class="card-row-label">Product data</span><span class="card-row-value">Open Food Facts</span></div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="screen-admin" class="screen">
+  <div class="nav">
+    <button class="nav-btn" onclick="showScreen('screen-capture')">← Back</button>
+    <span class="nav-title">Admin</span>
+  </div>
+  <div class="section-header">Users</div>
+  <div class="card" id="admin-users-list" style="margin:0 16px 12px;"><div class="empty" style="padding:24px;">Loading…</div></div>
+  <div class="section-header">Invite New User</div>
+  <div class="card" style="margin:0 16px 12px;">
+    <div style="padding:14px 16px;display:flex;gap:10px;align-items:flex-end;">
+      <div style="flex:1;"><label class="field-label">Name</label><input type="text" id="admin-new-name" placeholder="e.g. Mel"></div>
+      <button class="btn-secondary" style="white-space:nowrap;height:40px;" onclick="generateInvite()">Generate Code</button>
+    </div>
+  </div>
+  <div id="new-invite-card" style="display:none;" class="card">
+    <div style="padding:16px;text-align:center;">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Share this invite code with</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:12px;" id="new-invite-name"></div>
+      <div id="new-invite-code" class="code-badge" style="font-size:20px;padding:10px 20px;display:inline-block;margin-bottom:12px;"></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">Tap code to copy · One-time use only</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BARCODE SCANNER OVERLAY ══ -->
+<div class="scanner-overlay" id="scanner-overlay">
+  <div class="scanner-header">
+    <span class="scanner-title">Scan Barcode</span>
+    <button class="scanner-close" onclick="closeScanner()">✕</button>
+  </div>
+  <div class="scanner-video-wrap">
+    <video id="scanner-video" playsinline muted autoplay></video>
+    <div class="scanner-frame">
+      <div class="scanner-line"></div>
+    </div>
+  </div>
+  <div class="scanner-hint" id="scanner-hint">Point the camera at a barcode · <span id="scanner-status">scanning…</span></div>
+</div>
+
+<!-- ══ TAB BAR ══ -->
+<nav class="tabbar" id="main-tabbar" style="display:none;">
+  <button class="tab active" id="tab-capture" onclick="showTab('capture')">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Capture
+  </button>
+  <button class="tab" id="tab-barcode" onclick="showTab('barcode')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="9"/><line x1="15" y1="3" x2="15" y2="9"/><line x1="9" y1="15" x2="9" y2="21"/><line x1="15" y1="15" x2="15" y2="21"/></svg>
+    Barcode
+  </button>
+  <button class="tab" id="tab-history" onclick="showTab('history')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    History
+  </button>
+  <button class="tab" id="tab-admin" onclick="showTab('admin')" style="display:none;">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Admin
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFfkUitGBEpkYb7Ktifk_a-51LXTziR9KR-jrdY6iDpyRUSOMswqhviysPgHgQj2mT/exec';
+const ADMIN_CODE = 'ADMIN-RT2026';
+
+// ── STATE ──────────────────────────────────────────────────────────────
+let settings = {}, currentUser = null, extractedData = null;
+let manualItems = [], localHistory = [];
+let scannerStream = null, codeReader = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────
+function init() {
+  settings = JSON.parse(localStorage.getItem('rt-settings') || '{}');
+  currentUser = JSON.parse(localStorage.getItem('rt-user') || 'null');
+  localHistory = JSON.parse(localStorage.getItem('rt-history') || '[]');
+  if (settings.claudeKey) document.getElementById('s-claude-key').value = settings.claudeKey;
+  const today = new Date().toISOString().slice(0,10);
+  const now   = new Date().toTimeString().slice(0,5);
+  document.getElementById('m-date').value = today;
+  document.getElementById('m-time').value = now;
+  addManualItem();
+  if (currentUser) activateApp(); else showScreen('screen-welcome');
+}
+
+function activateApp() {
+  document.getElementById('main-tabbar').style.display = 'flex';
+  if (currentUser.isAdmin) document.getElementById('tab-admin').style.display = 'flex';
+  updateUserPill();
+  updateProfileScreen();
+  showTab('capture');
+}
+
+function updateUserPill() {
+  if (!currentUser) return;
+  document.getElementById('nav-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+  document.getElementById('nav-username').textContent = currentUser.name;
+}
+
+function updateProfileScreen() {
+  if (!currentUser) return;
+  document.getElementById('profile-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+  document.getElementById('profile-name').textContent = currentUser.name;
+  document.getElementById('profile-id').textContent = currentUser.userId;
+  document.getElementById('profile-since').textContent = formatDate(currentUser.registeredDate) || '—';
+  document.getElementById('profile-count').textContent = localHistory.length;
+}
+
+// ── ROUTING ────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screen-history') renderHistory();
+  if (id === 'screen-admin') loadAdminUsers();
+  if (id === 'screen-profile') updateProfileScreen();
+  if (id === 'screen-barcode') {
+    document.getElementById('barcode-empty').style.display = 'block';
+    document.getElementById('barcode-result').style.display = 'none';
+  }
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  showScreen('screen-' + tab);
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────────
+async function registerUser() {
+  const code = document.getElementById('w-code').value.trim().toUpperCase();
+  const name = document.getElementById('w-name').value.trim();
+  if (!code) { showToast('Enter your invite code', 'error'); return; }
+  if (!name) { showToast('Enter your name', 'error'); return; }
+  showToast('Checking invite code…');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'register', code, name }) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Invalid or already used invite code');
+    currentUser = { userId: data.userId, name: data.name, isAdmin: data.isAdmin||false, registeredDate: new Date().toISOString().slice(0,10) };
+    localStorage.setItem('rt-user', JSON.stringify(currentUser));
+    showToast('Welcome, ' + currentUser.name + '! 🎉', 'success');
+    activateApp();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function showAdminLogin() {
+  const code = prompt('Enter admin code:');
+  if (!code) return;
+  if (code.trim().toUpperCase() === ADMIN_CODE) {
+    currentUser = { userId:'USR-001', name:'Simon', isAdmin:true, registeredDate:new Date().toISOString().slice(0,10) };
+    localStorage.setItem('rt-user', JSON.stringify(currentUser));
+    activateApp();
+  } else { showToast('Incorrect admin code', 'error'); }
+}
+
+function signOut() {
+  if (!confirm('Sign out?')) return;
+  localStorage.removeItem('rt-user');
+  currentUser = null;
+  document.getElementById('main-tabbar').style.display = 'none';
+  showScreen('screen-welcome');
+}
+
+// ── CAMERA / IMAGE ─────────────────────────────────────────────────────
+function triggerCamera()  { document.getElementById('camera-input').click(); }
+function triggerLibrary() { document.getElementById('library-input').click(); }
+
+function handleImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result; img.style.display = 'block';
+    document.getElementById('extracted-section').style.display = 'none';
+    extractReceipt(e.target.result);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── CLAUDE EXTRACTION ──────────────────────────────────────────────────
+async function extractReceipt(dataUrl) {
+  if (!settings.claudeKey) { showToast('Add Claude API key in Settings', 'error'); return; }
+  document.getElementById('processing').style.display = 'block';
+  const base64 = dataUrl.split(',')[1];
+  const mediaType = dataUrl.split(';')[0].split(':')[1];
+  const prompt = `Extract all data from this receipt. Respond ONLY with valid JSON, no other text:
+{"store":"store name and location","date":"YYYY-MM-DD","time":"HH:MM:SS","items":[{"description":"product name","category":"one of: Fresh Produce,Dairy & Cheese,Meat & Fish,Bakery,Pasta & Rice,Cereals,Snacks & Crisps,Confectionery,Ready Meals,Frozen,Drinks,Wine & Spirits,Hot Drinks,Condiments,Baking & Sugar,Household,Personal Care,Other","size":"size or null","barcode":"barcode number if visible on receipt or null","shelf_price":0.00,"loyalty_discount":0.00,"loyalty_scheme":"scheme name or null"}]}
+If a loyalty discount applies, set shelf_price to the FULL price before discount and loyalty_discount to the saving (positive number). If no discount, loyalty_discount is 0. Extract barcode numbers if they appear next to individual items on the receipt.`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':settings.claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:1500, messages:[{ role:'user', content:[{ type:'image', source:{ type:'base64', media_type:mediaType, data:base64 } },{ type:'text', text:prompt }] }] })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    let text = data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    extractedData = JSON.parse(text);
+    // Auto-enrich barcodes via Open Food Facts
+    await enrichWithBarcodes(extractedData.items);
+    renderExtracted();
+  } catch(e) { showToast('Error reading receipt: ' + e.message, 'error'); }
+  finally { document.getElementById('processing').style.display = 'none'; }
+}
+
+// ── OPEN FOOD FACTS ENRICHMENT ─────────────────────────────────────────
+async function enrichWithBarcodes(items) {
+  for (const item of items) {
+    if (item.barcode) {
+      try {
+        const data = await fetchOFF(item.barcode);
+        if (data && data.product) {
+          const p = data.product;
+          if (!item.description || item.description.length < 5) item.description = p.product_name || item.description;
+          if (!item.category || item.category === 'Other') item.category = mapOFFCategory(p.categories_tags);
+          if (!item.size) item.size = p.quantity || null;
+        }
+      } catch(e) { /* silent fail — barcode lookup is best effort */ }
+    }
+  }
+}
+
+async function fetchOFF(barcode) {
+  const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+function mapOFFCategory(tags) {
+  if (!tags || !tags.length) return 'Other';
+  const t = tags.join(' ').toLowerCase();
+  if (t.includes('dairy') || t.includes('cheese') || t.includes('milk') || t.includes('yogurt') || t.includes('butter')) return 'Dairy & Cheese';
+  if (t.includes('meat') || t.includes('fish') || t.includes('seafood') || t.includes('poultry')) return 'Meat & Fish';
+  if (t.includes('vegetable') || t.includes('fruit') || t.includes('produce')) return 'Fresh Produce';
+  if (t.includes('bread') || t.includes('bakery') || t.includes('pastry')) return 'Bakery';
+  if (t.includes('pasta') || t.includes('rice') || t.includes('grain')) return 'Pasta & Rice';
+  if (t.includes('cereal') || t.includes('muesli') || t.includes('porridge')) return 'Cereals';
+  if (t.includes('chocolate') || t.includes('confectionery') || t.includes('sweet') || t.includes('candy')) return 'Confectionery';
+  if (t.includes('snack') || t.includes('crisp') || t.includes('chips')) return 'Snacks & Crisps';
+  if (t.includes('frozen')) return 'Frozen';
+  if (t.includes('wine') || t.includes('beer') || t.includes('spirit') || t.includes('alcohol')) return 'Wine & Spirits';
+  if (t.includes('beverage') || t.includes('juice') || t.includes('water') || t.includes('soft-drink')) return 'Drinks';
+  if (t.includes('coffee') || t.includes('tea')) return 'Hot Drinks';
+  if (t.includes('sauce') || t.includes('condiment') || t.includes('dressing')) return 'Condiments';
+  if (t.includes('baking') || t.includes('sugar') || t.includes('flour')) return 'Baking & Sugar';
+  if (t.includes('ready') || t.includes('meal') || t.includes('prepared')) return 'Ready Meals';
+  return 'Other';
+}
+
+// ── BARCODE SCANNER ────────────────────────────────────────────────────
+async function openScanner() {
+  const overlay = document.getElementById('scanner-overlay');
+  overlay.classList.add('active');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    scannerStream = stream;
+    const video = document.getElementById('scanner-video');
+    video.srcObject = stream;
+    await video.play();
+    scanFrame();
+  } catch(e) {
+    closeScanner();
+    showToast('Camera error: ' + e.message, 'error');
+  }
+}
+
+function closeScanner() {
+  document.getElementById('scanner-overlay').classList.remove('active');
+  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+}
+
+let scannerAnimFrame = null;
+let lastScanTime = 0;
+
+function scanFrame() {
+  const video = document.getElementById('scanner-video');
+  if (!scannerStream || video.readyState < 2) { scannerAnimFrame = requestAnimationFrame(scanFrame); return; }
+  const now = Date.now();
+  if (now - lastScanTime > 400) {
+    lastScanTime = now;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(async blob => {
+      try {
+        const detected = await detectBarcodeFromBlob(blob);
+        if (detected) { closeScanner(); document.getElementById('barcode-input').value = detected; lookupBarcode(detected); return; }
+      } catch(e) {}
+      if (scannerStream) scannerAnimFrame = requestAnimationFrame(scanFrame);
+    }, 'image/jpeg', 0.8);
+    return;
+  }
+  scannerAnimFrame = requestAnimationFrame(scanFrame);
+}
+
+async function detectBarcodeFromBlob(blob) {
+  // Works on all browsers including Safari via ZBar WASM polyfill
+  try {
+    const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code','itf','codabar'] });
+    const img = await createImageBitmap(blob);
+    const barcodes = await detector.detect(img);
+    return barcodes.length ? barcodes[0].rawValue : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── BARCODE LOOKUP ─────────────────────────────────────────────────────
+let lastLookedUpProduct = null; // store for save action
+
+async function lookupBarcode(barcode) {
+  barcode = (barcode || '').trim();
+  if (!barcode) { showToast('Enter or scan a barcode', 'error'); return; }
+  document.getElementById('barcode-empty').style.display = 'none';
+  document.getElementById('barcode-result').style.display = 'none';
+  document.getElementById('barcode-loading').style.display = 'block';
+  lastLookedUpProduct = null;
+
+  try {
+    const data = await fetchOFF(barcode);
+    document.getElementById('barcode-loading').style.display = 'none';
+
+    if (!data || data.status === 0 || !data.product) {
+      document.getElementById('barcode-result').innerHTML = `
+        <div class="empty"><div class="empty-icon">🔍</div>No product found for barcode<br><strong>${esc(barcode)}</strong><br><span style="font-size:13px;">Not yet in Open Food Facts database</span></div>`;
+      document.getElementById('barcode-result').style.display = 'block';
+      return;
+    }
+
+    const p = data.product;
+    const name      = p.product_name || p.product_name_en || 'Unknown product';
+    const brand     = p.brands || '';
+    const quantity  = p.quantity || '';
+    const imgUrl    = p.image_front_url || p.image_url || '';
+    const category  = mapOFFCategory(p.categories_tags);
+    const nutri     = p.nutriments || {};
+    const nutriScore = p.nutriscore_grade ? p.nutriscore_grade.toUpperCase() : null;
+    const nova      = p.nova_group || null;
+
+    // Always read fresh from sheet - determines whether to show save button
+    const existing = await readSheet();
+    const inSheet = existing.products.find(pr => pr[4] && pr[4].toString() === barcode.toString());
+
+    // Only store for saving if genuinely not in sheet yet
+    lastLookedUpProduct = inSheet ? null : { barcode, name, brand, quantity, category };
+
+    const tags = [category, brand, quantity].filter(Boolean);
+
+    const nutriHtml = (nutri['energy-kcal_100g'] || nutri['fat_100g'] !== undefined) ? `
+      <div style="font-size:12px;color:var(--text2);margin-top:12px;margin-bottom:6px;">Per 100g</div>
+      <div class="nutri-grid">
+        <div class="nutri-cell"><div class="nutri-val">${Math.round(nutri['energy-kcal_100g']||0)}</div><div class="nutri-label">kcal</div></div>
+        <div class="nutri-cell"><div class="nutri-val">${(nutri['fat_100g']||0).toFixed(1)}g</div><div class="nutri-label">Fat</div></div>
+        <div class="nutri-cell"><div class="nutri-val">${(nutri['carbohydrates_100g']||0).toFixed(1)}g</div><div class="nutri-label">Carbs</div></div>
+        <div class="nutri-cell"><div class="nutri-val">${(nutri['proteins_100g']||0).toFixed(1)}g</div><div class="nutri-label">Protein</div></div>
+      </div>` : '';
+
+    const scoreHtml = nutriScore ? `<span class="product-tag" style="background:#${{'a':'1e8449','b':'27ae60','c':'f39c12','d':'e67e22','e':'c0392b'}[nutriScore.toLowerCase()]||'888'};color:#fff;">Nutri-Score ${nutriScore}</span>` : '';
+    const novaHtml  = nova ? `<span class="product-tag" style="background:var(--surface2);color:var(--text2);">NOVA ${nova}</span>` : '';
+
+    const saveBtn = inSheet
+      ? `<div class="in-sheet-badge" style="margin-top:12px;">✓ Already in your sheet · ${esc(inSheet[0])}</div>`
+      : `<div id="save-product-wrap"><button class="submit-btn" style="margin-top:12px;" onclick="saveScannedProduct()">+ Add to product library</button></div>`;
+
+    document.getElementById('barcode-result').innerHTML = `
+      <div class="product-result">
+        ${imgUrl ? `<img class="product-img" src="${esc(imgUrl)}" alt="${esc(name)}" onerror="this.style.display='none'">` : ''}
+        <div class="product-info">
+          <div class="product-name">${esc(name)}</div>
+          ${brand ? `<div class="product-brand">${esc(brand)}</div>` : ''}
+          <div class="product-tags">
+            ${tags.map(t => `<span class="product-tag">${esc(t)}</span>`).join('')}
+            ${scoreHtml}${novaHtml}
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">Barcode: ${esc(barcode)}</div>
+          ${nutriHtml}
+          ${saveBtn}
+        </div>
+      </div>`;
+    document.getElementById('barcode-result').style.display = 'block';
+  } catch(e) {
+    document.getElementById('barcode-loading').style.display = 'none';
+    showToast('Lookup failed: ' + e.message, 'error');
+    document.getElementById('barcode-empty').style.display = 'block';
+  }
+}
+
+let isSavingProduct = false;
+
+async function saveScannedProduct() {
+  // Guard against double-tap and missing product
+  if (!lastLookedUpProduct || isSavingProduct) return;
+  isSavingProduct = true;
+
+  // Update button immediately
+  const btnWrap = document.getElementById('save-product-wrap');
+  if (btnWrap) btnWrap.innerHTML = '<div style="font-size:14px;color:var(--text2);margin-top:12px;">Saving…</div>';
+
+  const { barcode, name, quantity, category } = lastLookedUpProduct;
+  try {
+    const existing = await readSheet();
+    // Final check — belt and braces
+    const alreadyThere = existing.products.find(p => p[4] && p[4].toString() === barcode.toString());
+    if (alreadyThere) {
+      if (btnWrap) btnWrap.innerHTML = `<div class="in-sheet-badge" style="margin-top:12px;">✓ Already in your sheet · ${esc(alreadyThere[0])}</div>`;
+      showToast('Already in your sheet', 'success');
+      lastLookedUpProduct = null;
+      return;
+    }
+    const productId = genProductId(name, existing.products);
+    await batchAppend([{ sheet: 'Products', rows: [[productId, name, quantity, category, barcode]] }]);
+    lastLookedUpProduct = null;
+    if (btnWrap) btnWrap.innerHTML = `<div class="in-sheet-badge" style="margin-top:12px;">✓ Saved · ${esc(productId)}</div>`;
+    showToast('Product saved to library ✓', 'success');
+  } catch(e) {
+    if (btnWrap) btnWrap.innerHTML = `<button class="submit-btn" style="margin-top:12px;" onclick="saveScannedProduct()">+ Add to product library</button>`;
+    showToast('Save failed: ' + e.message, 'error');
+  } finally {
+    isSavingProduct = false;
+  }
+}
+
+// ── RENDER EXTRACTED ───────────────────────────────────────────────────
+function renderExtracted() {
+  if (!extractedData) return;
+  document.getElementById('extracted-section').style.display = 'block';
+  document.getElementById('ex-store').value = extractedData.store || '';
+  document.getElementById('ex-date').value  = extractedData.date  || '';
+  document.getElementById('ex-time').value  = (extractedData.time || '').slice(0,5);
+  const list = document.getElementById('items-list');
+  list.innerHTML = '';
+  extractedData.items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    const barcodeHtml = item.barcode ? `<div style="font-size:11px;color:var(--text3);font-family:'SF Mono',monospace;margin-top:2px;">📦 ${esc(item.barcode)}</div>` : '';
+    const discHtml    = item.loyalty_discount > 0 ? `<div class="item-discount">− £${item.loyalty_discount.toFixed(2)} ${item.loyalty_scheme||'loyalty'}</div>` : '';
+    row.innerHTML = `
+      <div class="item-info">
+        <div class="item-name"><input class="editable item-name" value="${esc(item.description)}" onchange="extractedData.items[${i}].description=this.value;updateTotal()"></div>
+        <div class="item-meta">${esc(item.category||'')}${item.size?' · '+esc(item.size):''}${discHtml}</div>
+        ${barcodeHtml}
+      </div>
+      <div style="text-align:right">
+        <div class="item-price">£<input class="editable" style="width:52px;text-align:right;font-weight:600;font-size:15px" value="${item.shelf_price.toFixed(2)}" onchange="extractedData.items[${i}].shelf_price=parseFloat(this.value)||0;updateTotal()"></div>
+      </div>
+      <button class="item-delete" onclick="extractedData.items.splice(${i},1);renderExtracted()">×</button>`;
+    list.appendChild(row);
+  });
+  const discounts = extractedData.items.filter(it => it.loyalty_discount > 0);
+  const discSec = document.getElementById('discounts-section');
+  if (discounts.length) {
+    discSec.style.display = 'block';
+    document.getElementById('discounts-list').innerHTML = discounts.map(it => `
+      <div class="item-row">
+        <div class="item-info"><div class="item-name">${esc(it.loyalty_scheme||'Loyalty discount')}</div><div class="item-meta">${esc(it.description)}</div></div>
+        <div class="item-price" style="color:var(--warn)">− £${it.loyalty_discount.toFixed(2)}</div>
+      </div>`).join('');
+  } else { discSec.style.display = 'none'; }
+  updateTotal();
+}
+
+function updateTotal() {
+  if (!extractedData) return;
+  const total = extractedData.items.reduce((s,it) => s + it.shelf_price - (it.loyalty_discount||0), 0);
+  document.getElementById('total-display').textContent = '£' + total.toFixed(2);
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── SAVE TO SHEETS ─────────────────────────────────────────────────────
+async function saveToSheets() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const store = document.getElementById('ex-store').value.trim();
+    const date  = document.getElementById('ex-date').value;
+    const time  = document.getElementById('ex-time').value;
+    const items = extractedData.items;
+    const existing = await readSheet();
+    const nextTX = nextId(existing.transactions,'TX-',4,1001);
+    const nextPP = nextId(existing.prices,'PP-',4,1);
+    const nextLD = nextId(existing.discounts,'LD-',3,1);
+    const receiptId = genReceiptId(date, existing.receipts);
+    const storeId   = findOrCreateStore(store, existing.stores);
+    const txRows=[], ppRows=[], ldRows=[], productRows=[];
+    let txNum=nextTX, ppNum=nextPP, ldNum=nextLD;
+    for (const item of items) {
+      // Match by barcode first, then by description (case-insensitive)
+      let existingProduct = item.barcode
+        ? existing.products.find(p => p[4] && p[4].toString() === item.barcode.toString())
+        : existing.products.find(p => (p[1]||'').toLowerCase() === (item.description||'').toLowerCase());
+      const productId = existingProduct ? existingProduct[0] : genProductId(item.description, existing.products);
+      if (!existingProduct) {
+        productRows.push([productId, item.description, item.size||'', item.category||'', item.barcode||'']);
+        existing.products.push([productId, item.description, item.size||'', item.category||'', item.barcode||'']);
+      }
+      const priceId = `PP-${String(ppNum).padStart(4,'0')}`;
+      ppRows.push([priceId, productId, storeId, item.shelf_price.toFixed(2), date]);
+      ppNum++;
+      const txId = `TX-${String(txNum).padStart(4,'0')}`;
+      txRows.push([txId, receiptId, productId, priceId]);
+      txNum++;
+      if ((item.loyalty_discount||0) > 0) {
+        ldRows.push([`LD-${String(ldNum).padStart(3,'0')}`, txId, item.loyalty_scheme||'Loyalty', item.loyalty_discount.toFixed(2)]);
+        ldNum++;
+      }
+    }
+    const receiptRow = [receiptId, storeId, date, time, currentUser.userId, currentUser.name];
+    const storeRow   = existing.stores.find(s => s[0] === storeId) ? null : [storeId, store, '', '', ''];
+    const ops = [];
+    if (storeRow)           ops.push({ sheet:'Stores',            rows:[storeRow] });
+    ops.push(               { sheet:'Receipts',                   rows:[receiptRow] });
+    if (productRows.filter(r=>r[0]!=='UPDATE').length) ops.push({ sheet:'Products', rows:productRows.filter(r=>r[0]!=='UPDATE') });
+    ops.push(               { sheet:'Product_Prices',             rows:ppRows });
+    ops.push(               { sheet:'Master Transactions',        rows:txRows });
+    if (ldRows.length)      ops.push({ sheet:'Loyalty_Discounts', rows:ldRows });
+    await batchAppend(ops);
+    const total = items.reduce((s,it) => s + it.shelf_price - (it.loyalty_discount||0), 0);
+    localHistory.unshift({ store, date, time, total:total.toFixed(2), items:items.length, receiptId, user:currentUser.name });
+    localStorage.setItem('rt-history', JSON.stringify(localHistory.slice(0,100)));
+    showToast('Saved ✓', 'success');
+    btn.textContent = 'Saved ✓';
+    setTimeout(() => {
+      document.getElementById('extracted-section').style.display = 'none';
+      document.getElementById('preview-img').style.display = 'none';
+      btn.disabled = false; btn.textContent = 'Save to Google Sheets';
+      extractedData = null;
+    }, 1500);
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Save to Google Sheets';
+  }
+}
+
+// ── SHEETS HELPERS ─────────────────────────────────────────────────────
+async function readSheet() {
+  const res = await fetch(APPS_SCRIPT_URL);
+  if (!res.ok) throw new Error('Could not read sheet');
+  const data = await res.json();
+  return { transactions:data['Master Transactions']||[], receipts:data['Receipts']||[], products:data['Products']||[], stores:data['Stores']||[], prices:data['Product_Prices']||[], discounts:data['Loyalty_Discounts']||[], users:data['Users']||[] };
+}
+
+async function batchAppend(ops) {
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'batch', ops }) });
+  if (!res.ok) throw new Error('Could not write to sheet');
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Write error');
+  return data;
+}
+
+// ── ID HELPERS ─────────────────────────────────────────────────────────
+function nextId(rows, prefix, pad, start) {
+  if (!rows.length) return start;
+  const nums = rows.map(r => parseInt((r[0]||'').replace(prefix,''))||0);
+  return Math.max(...nums, start-1)+1;
+}
+function genReceiptId(date, receipts) {
+  const d = date.replace(/-/g,'');
+  return `R-${d}-${receipts.filter(r=>(r[0]||'').startsWith('R-'+d)).length+1}`;
+}
+function genProductId(desc, products) {
+  const words = desc.toUpperCase().replace(/[^A-Z0-9 ]/g,'').split(' ').filter(Boolean).slice(0,3);
+  let base = 'PR-' + words.map(w=>w.slice(0,4)).join('-');
+  if (!products.find(p=>p[0]===base)) return base;
+  let n=2; while(products.find(p=>p[0]===base+'-'+n)) n++;
+  return base+'-'+n;
+}
+function findOrCreateStore(storeName, stores) {
+  const name = storeName.toLowerCase();
+  const found = stores.find(s => ((s[1]||'').toLowerCase()+' '+(s[2]||'').toLowerCase()).includes(name) || name.includes((s[2]||'').toLowerCase()));
+  if (found) return found[0];
+  const parts = storeName.split(/[\s,]+/);
+  const brand = parts[0].slice(0,5).toUpperCase();
+  const loc   = (parts[parts.length-1]||'X').slice(0,3).toUpperCase();
+  let id=`ST-${brand}-${loc}`, n=2;
+  while(stores.find(s=>s[0]===id)) { id=`ST-${brand}-${loc}${n}`; n++; }
+  return id;
+}
+
+// ── MANUAL ENTRY ───────────────────────────────────────────────────────
+function addManualItem() {
+  manualItems.push({ description:'', category:'Other', size:'', shelf_price:0, loyalty_discount:0, loyalty_scheme:'', barcode:'' });
+  renderManualItems();
+}
+function renderManualItems() {
+  const cats=['Fresh Produce','Dairy & Cheese','Meat & Fish','Bakery','Pasta & Rice','Cereals','Snacks & Crisps','Confectionery','Ready Meals','Frozen','Drinks','Wine & Spirits','Hot Drinks','Condiments','Baking & Sugar','Household','Personal Care','Other'];
+  document.getElementById('manual-items-list').innerHTML = manualItems.map((item,i) => `
+    <div class="item-row" style="flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px;">
+      <div class="inline-edit">
+        <input type="text" placeholder="Item description" value="${esc(item.description)}" onchange="manualItems[${i}].description=this.value">
+        <button class="item-delete" onclick="manualItems.splice(${i},1);renderManualItems()">×</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <select onchange="manualItems[${i}].category=this.value">${cats.map(c=>`<option ${c===item.category?'selected':''}>${c}</option>`).join('')}</select>
+        <input type="text" placeholder="Size (e.g. 500g)" value="${esc(item.size)}" onchange="manualItems[${i}].size=this.value">
+      </div>
+      <input type="text" placeholder="Barcode (optional)" value="${esc(item.barcode)}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="manualItems[${i}].barcode=this.value" style="font-family:'SF Mono',monospace;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label class="field-label">Shelf price £</label><input type="number" step="0.01" min="0" value="${item.shelf_price||''}" placeholder="0.00" onchange="manualItems[${i}].shelf_price=parseFloat(this.value)||0"></div>
+        <div><label class="field-label">Loyalty discount £</label><input type="number" step="0.01" min="0" value="${item.loyalty_discount||''}" placeholder="0.00" onchange="manualItems[${i}].loyalty_discount=parseFloat(this.value)||0"></div>
+      </div>
+    </div><div class="divider"></div>`).join('');
+}
+async function saveManualToSheets() {
+  const store = document.getElementById('m-store').value.trim();
+  const date  = document.getElementById('m-date').value;
+  const time  = document.getElementById('m-time').value;
+  if (!store) { showToast('Enter a store name', 'error'); return; }
+  extractedData = { store, date, time, items: manualItems.filter(i => i.description) };
+  if (!extractedData.items.length) { showToast('Add at least one item', 'error'); return; }
+  await saveToSheets();
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────
+const storeEmoji = { sainsbury:'🛒', tesco:'🛒', 'co-op':'🌿', coop:'🌿', bp:'⛽', aldi:'🛒', lidl:'🛒', waitrose:'🛍️', marks:'🛍️', default:'🧾' };
+function storeIcon(name) { const l=(name||'').toLowerCase(); return storeEmoji[Object.keys(storeEmoji).find(k=>l.includes(k))]||storeEmoji.default; }
+function renderHistory() {
+  const wrap = document.getElementById('history-list-wrap');
+  if (!localHistory.length) { wrap.innerHTML='<div class="empty"><div class="empty-icon">🧾</div>No receipts yet.<br>Photograph your first receipt to get started.</div>'; return; }
+  wrap.innerHTML='<div class="card" style="margin:16px;">'+localHistory.map(h=>`
+    <div class="history-item">
+      <div class="history-icon">${storeIcon(h.store)}</div>
+      <div class="history-info">
+        <div class="history-store">${esc(h.store)}</div>
+        <div class="history-date">${formatDate(h.date)} · ${h.items} item${h.items!==1?'s':''} · ${esc(h.user||'')}</div>
+      </div>
+      <div class="history-total">£${h.total}</div>
+    </div>`).join('<div class="divider"></div>')+'</div>';
+}
+function formatDate(d) { if(!d)return''; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+
+// ── SETTINGS ───────────────────────────────────────────────────────────
+function saveSettings() {
+  settings.claudeKey = document.getElementById('s-claude-key').value.trim();
+  localStorage.setItem('rt-settings', JSON.stringify(settings));
+  showToast('Settings saved', 'success');
+}
+
+// ── ADMIN ──────────────────────────────────────────────────────────────
+async function loadAdminUsers() {
+  const list = document.getElementById('admin-users-list');
+  list.innerHTML = '<div class="empty" style="padding:24px;">Loading…</div>';
+  try {
+    const data = await readSheet();
+    if (!data.users.length) { list.innerHTML='<div class="empty" style="padding:24px;">No users yet</div>'; return; }
+    list.innerHTML = data.users.map(u => {
+      const [uid,name,code,status,date] = u;
+      const isActive = (status||'').toLowerCase()==='active';
+      return `<div class="user-row">
+        <div class="user-row-avatar">${(name||'?').charAt(0).toUpperCase()}</div>
+        <div class="user-row-info">
+          <div class="user-row-name">${esc(name)} <span style="font-size:11px;color:var(--text3);">${esc(uid)}</span></div>
+          <div class="user-row-meta"><span class="status-dot ${isActive?'active':'pending'}"></span>${isActive?'Active · joined '+formatDate(date):'Pending invite'}</div>
+        </div>
+        ${!isActive?`<div class="code-badge" onclick="copyCode('${esc(code)}')">${esc(code)}</div>`:''}
+      </div>`;
+    }).join('<div class="divider"></div>');
+  } catch(e) { list.innerHTML=`<div class="empty" style="padding:24px;color:var(--danger);">Error: ${e.message}</div>`; }
+}
+
+async function generateInvite() {
+  const name = document.getElementById('admin-new-name').value.trim();
+  if (!name) { showToast('Enter a name', 'error'); return; }
+  const data = await readSheet();
+  const nextUserNum = nextId(data.users,'USR-',3,2);
+  const userId = `USR-${String(nextUserNum).padStart(3,'0')}`;
+  const code = name.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4)+'-'+Math.floor(1000+Math.random()*9000);
+  await batchAppend([{ sheet:'Users', rows:[[userId,name,code,'pending','']] }]);
+  document.getElementById('new-invite-card').style.display = 'block';
+  document.getElementById('new-invite-name').textContent = name;
+  const codeEl = document.getElementById('new-invite-code');
+  codeEl.textContent = code;
+  codeEl.onclick = () => copyCode(code);
+  document.getElementById('admin-new-name').value = '';
+  loadAdminUsers();
+  showToast('Invite created for ' + name, 'success');
+}
+
+function copyCode(code) { navigator.clipboard.writeText(code).then(() => showToast('Copied: ' + code, 'success')); }
+
+// ── TOAST ──────────────────────────────────────────────────────────────
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+init();
+</script>
+</body>
+</html>

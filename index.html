@@ -2479,6 +2479,9 @@ async function performMergeProduct(incompleteId, targetId, incompleteProduct, ta
     // Send merge operations (receipt descriptions)
     if (mergeOps.length > 0) {
       for (const op of mergeOps) {
+
+console.log('About to delete product:', incompleteId);        
+        
         await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({ action: 'batch', ops: [op] })

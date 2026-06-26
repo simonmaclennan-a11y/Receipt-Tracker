@@ -2489,7 +2489,8 @@ console.log('About to delete product:', incompleteId);
       }
     }
     
-    // Update transactions (redirect to target product)
+   
+// Update transactions (redirect to target product)
     if (transactionsToUpdate.length > 0) {
       for (const t of transactionsToUpdate) {
         const newRow = [...t];
@@ -2503,14 +2504,24 @@ console.log('About to delete product:', incompleteId);
         });
       }
     }
-
-console.log('About to delete product:', incompleteId);
     
     // 3. Delete the incomplete product row
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'deleteProduct', productId: incompleteId })
-    });
+    console.log('About to delete product:', incompleteId);
+    try {
+      const deleteResp = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteProduct', productId: incompleteId })
+      });
+      const deleteResult = await deleteResp.json();
+      console.log('deleteProduct response:', deleteResult);
+    } catch(deleteErr) {
+      console.error('deleteProduct fetch error:', deleteErr);
+    }
+
+
+
+
+    
     
     const summary = [
       transactionsToUpdate.length > 0 ? `Redirected ${transactionsToUpdate.length} transaction(s)` : null,
